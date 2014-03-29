@@ -19,7 +19,7 @@ tokenize ('/':cs) = Op '/':tokenize cs
 tokenize ('=':cs) = Op '=':tokenize cs
 tokenize ('(':cs) = OPar:tokenize cs
 tokenize (')':cs) = CPar:tokenize cs
-tokenize ('\n':cs) = [EOF]
+tokenize ('\n':_) = [EOF]
 tokenize cs | isDigit . head $ cs =
                 let (val, cs') = atoi cs
                 in TokNbr val:tokenize cs'

@@ -35,6 +35,7 @@ eat = do
     put $ tail toks
     return $ head toks
 
+runParser :: Parser a -> [Token] -> (a, [Token])
 runParser = runState
 
 expr :: Parser Expr
@@ -59,6 +60,7 @@ expr = do
                 _ -> fail "can only assign to a lvalue"
         _ -> return t
 
+term :: Parser Expr
 term = do
     lhs <- factor
     op <- peek
@@ -73,6 +75,7 @@ term = do
             return $ Div lhs rhs
         _ -> return lhs
 
+factor :: Parser Expr
 factor = do
     tok <- eat
     case tok of
@@ -88,3 +91,4 @@ factor = do
             case closing of
                 CPar -> return e
                 _ -> fail "no matching closing parenthesis"
+        _ -> fail "unexpected token"

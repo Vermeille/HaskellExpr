@@ -1,9 +1,9 @@
-import           Control.Monad (liftM, liftM2)
 import           Eval
 import           Parser
 import           Lexer
 import qualified Data.Map as M
 
+evalLine :: Env -> IO ()
 evalLine env = do
     input <- getLine
     let ast = fst . runParser expr . tokenize $ input
@@ -11,4 +11,5 @@ evalLine env = do
     putStrLn $ show ast ++ " = " ++ (show . fst $ res)
     evalLine . snd $ res
 
+main :: IO ()
 main = evalLine M.empty

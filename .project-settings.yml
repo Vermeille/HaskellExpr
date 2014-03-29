@@ -9,4 +9,5 @@ version: 1
 extra-packages: ''
 ghc-args:
 - -Wall
+- -fno-warn-unused-do-bind
 excluded-modules: []

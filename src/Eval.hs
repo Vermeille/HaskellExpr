@@ -19,8 +19,10 @@ writeVar var val = do
     modify (M.insert var val)
     return ()
 
+runEval :: State Env a -> Env -> (a, Env)
 runEval = runState
 
+eval :: Expr -> Evaluator Int
 eval (Const a) = return a
 eval (Var v) = readVar v
 eval (Add e e') = do
