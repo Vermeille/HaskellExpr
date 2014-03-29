@@ -1,8 +1,14 @@
--- | Main entry point to the application.
-module Main where
+import           Control.Monad (liftM, liftM2)
+import           Eval
+import           Parser
+import           Lexer
+import qualified Data.Map as M
 
--- | The main entry point.
-main :: IO ()
-main = do
-    putStrLn "Welcome to FP Haskell Center!"
-    putStrLn "Have a good day!"
+evalLine env = do
+    input <- getLine
+    let ast = fst . runParser expr . tokenize $ input
+    let res = runEval (eval ast) env
+    putStrLn $ show ast ++ " = " ++ (show . fst $ res)
+    evalLine . snd $ res
+
+main = evalLine M.empty
