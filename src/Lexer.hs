@@ -8,6 +8,9 @@ data Token  = TokNbr Int
             | OPar
             | CPar
             | EOF
+            | Coma
+            | Percent
+            deriving (Eq, Show)
 
 tokenize :: String -> [Token]
 tokenize [] = [EOF]
@@ -19,6 +22,8 @@ tokenize ('/':cs) = Op '/':tokenize cs
 tokenize ('=':cs) = Op '=':tokenize cs
 tokenize ('(':cs) = OPar:tokenize cs
 tokenize (')':cs) = CPar:tokenize cs
+tokenize (',':cs) = Coma:tokenize cs
+tokenize ('%':cs) = Percent:tokenize cs
 tokenize ('\n':_) = [EOF]
 tokenize cs | isDigit . head $ cs =
                 let (val, cs') = atoi cs

@@ -1,6 +1,7 @@
 module Parser where
 
 import           Control.Monad.State
+import           Data.List           (intercalate)
 import           Lexer
 
 data Expr   = Const Int
@@ -11,6 +12,9 @@ data Expr   = Const Int
             | Div Expr Expr
             | Neg Expr
             | Assign String Expr
+            | FunCall String [Expr]
+            | FunDec String [String] Expr
+            deriving (Eq)
 
 instance Show Expr where
     show (Const a) = show a
@@ -21,6 +25,8 @@ instance Show Expr where
     show (Div e e') = "(" ++ show e ++ " / " ++ show e' ++ ")"
     show (Neg e) = "-(" ++ show e ++ ")"
     show (Assign v e) = v ++ " = " ++ show e
+    show (FunCall nm args) = nm ++ "(" ++ (intercalate ", " . map show $ args) ++ ")"
+    show (FunDec nm args body) = nm ++ "(" ++ intercalate ", " args ++ ") {" ++ show body ++ "}"
 
 type Parser a = State [Token] a
 
@@ -37,6 +43,47 @@ eat = do
 
 runParser :: Parser a -> [Token] -> (a, [Token])
 runParser = runState
+
+fullParser :: Parser Expr
+fullParser = topLevel
+
+sepBy :: Show a => Parser a -> Token -> Parser [a]
+sepBy inner sep = do
+    el <- inner
+    sep' <- peek
+    if sep' == sep then do
+        eat
+        next <- sepBy inner sep
+        return $ el:next
+    else
+        return [el]
+
+parseIdent :: Parser String
+parseIdent = do
+    v <- eat
+    case v of
+        Ident nm -> return nm
+        _ -> fail "expected identifier"
+
+topLevel :: Parser Expr
+topLevel = do
+    dec <- peek
+    case dec of
+        Percent -> do
+            eat
+            funnm <- eat
+            del <- eat
+            case del of
+                OPar ->
+                    case funnm of
+                        Ident nm -> do
+                            args <- sepBy parseIdent Coma
+                            eat
+                            body <- expr
+                            return $ FunDec nm args body
+                        _ -> fail "function names must be plain strings"
+                _ -> fail "%functionName(args) body"
+        _ -> expr
 
 expr :: Parser Expr
 expr = do
@@ -84,7 +131,17 @@ factor = do
             nbr <- factor
             return $ Neg nbr
         TokNbr a -> return $ Const a
-        Ident a -> return $ Var a
+        Ident a -> do
+            fun <- peek
+            case fun of
+                OPar -> do
+                    eat
+                    args <- funArgs
+                    cpar <- eat
+                    case cpar of
+                        CPar -> return $ FunCall a args
+                        _ -> fail "function call must end with ')'"
+                _ -> return $ Var a
         OPar -> do
             e <- expr
             closing <- eat
@@ -92,3 +149,18 @@ factor = do
                 CPar -> return e
                 _ -> fail "no matching closing parenthesis"
         _ -> fail "unexpected token"
+
+funArgs :: Parser [Expr]
+funArgs = do
+    t <- peek
+    if t == CPar then
+        return []
+    else do
+        e <- expr
+        coma <- peek
+        if coma == Coma then do
+            eat
+            next <- funArgs
+            return $ e:next
+        else 
+            return [e | coma == CPar ]

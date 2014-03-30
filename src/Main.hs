@@ -6,7 +6,7 @@ import qualified Data.Map as M
 evalLine :: Env -> IO ()
 evalLine env = do
     input <- getLine
-    let ast = fst . runParser expr . tokenize $ input
+    let ast = fst . runParser fullParser . tokenize $ input
     let res = runEval (eval ast) env
     putStrLn $ show ast ++ " = " ++ (show . fst $ res)
     evalLine . snd $ res
