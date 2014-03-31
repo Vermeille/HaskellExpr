@@ -47,7 +47,7 @@ runParser = runState
 fullParser :: Parser Expr
 fullParser = topLevel
 
-sepBy :: Show a => Parser a -> Token -> Parser [a]
+sepBy :: Parser a -> Token -> Parser [a]
 sepBy inner sep = do
     el <- inner
     sep' <- peek
@@ -58,12 +58,26 @@ sepBy inner sep = do
     else
         return [el]
 
+token :: Token -> Parser Token
+token t = do
+    t' <- eat
+    case (t, t') of
+        (Ident _, Ident _) -> return t'
+        (TokNbr _, TokNbr _) -> return t'
+        (a, b) -> if a == b then return t' else
+            fail $ "expecting " ++ show t ++ " but found " ++ show t'
+
+between :: Token -> Token -> Parser a -> Parser a
+between opening closing inner = do
+    token opening
+    body <- inner
+    token closing
+    return body
+
 parseIdent :: Parser String
 parseIdent = do
-    v <- eat
-    case v of
-        Ident nm -> return nm
-        _ -> fail "expected identifier"
+    Ident nm <- token $ Ident "var"
+    return nm
 
 topLevel :: Parser Expr
 topLevel = do
@@ -71,18 +85,10 @@ topLevel = do
     case dec of
         Percent -> do
             eat
-            funnm <- eat
-            del <- eat
-            case del of
-                OPar ->
-                    case funnm of
-                        Ident nm -> do
-                            args <- sepBy parseIdent Coma
-                            eat
-                            body <- expr
-                            return $ FunDec nm args body
-                        _ -> fail "function names must be plain strings"
-                _ -> fail "%functionName(args) body"
+            nm <- parseIdent
+            args <- between OPar CPar $ sepBy parseIdent Coma
+            body <- expr
+            return $ FunDec nm args body
         _ -> expr
 
 expr :: Parser Expr
@@ -135,32 +141,14 @@ factor = do
             fun <- peek
             case fun of
                 OPar -> do
-                    eat
-                    args <- funArgs
-                    cpar <- eat
-                    case cpar of
-                        CPar -> return $ FunCall a args
-                        _ -> fail "function call must end with ')'"
+                    args <- between OPar CPar funArgs
+                    return $ FunCall a args
                 _ -> return $ Var a
         OPar -> do
             e <- expr
-            closing <- eat
-            case closing of
-                CPar -> return e
-                _ -> fail "no matching closing parenthesis"
+            token CPar
+            return e
         _ -> fail "unexpected token"
 
 funArgs :: Parser [Expr]
-funArgs = do
-    t <- peek
-    if t == CPar then
-        return []
-    else do
-        e <- expr
-        coma <- peek
-        if coma == Coma then do
-            eat
-            next <- funArgs
-            return $ e:next
-        else 
-            return [e | coma == CPar ]
+funArgs = sepBy expr Coma

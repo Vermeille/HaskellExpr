@@ -1,6 +1,5 @@
 module Eval where
 
-import Debug.Trace (trace)
 import Parser
 import Control.Monad.State
 import qualified Data.Map as M
@@ -50,7 +49,6 @@ eval (FunCall nm args) = do
     forM_  (zip args decArgs) $ \(v, n) -> do
         v' <- eval v
         writeVar n (Const v')
-    env' <- get
     ret <- eval body
     put env
     return ret
