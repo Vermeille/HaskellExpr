@@ -3,6 +3,7 @@ module Parser where
 import           Control.Monad.State
 import           Data.List           (intercalate)
 import           Lexer
+import Control.Applicative ((<$>), (<*>), (*>), (<*), pure)
 
 data Expr   = Const Int
             | Var String
@@ -51,10 +52,8 @@ sepBy :: Parser a -> Token -> Parser [a]
 sepBy inner sep = do
     el <- inner
     sep' <- peek
-    if sep' == sep then do
-        eat
-        next <- sepBy inner sep
-        return $ el:next
+    if sep' == sep then
+        (el:) <$> (eat *> sepBy inner sep)
     else
         return [el]
 
@@ -68,11 +67,7 @@ token t = do
             fail $ "expecting " ++ show t ++ " but found " ++ show t'
 
 between :: Token -> Token -> Parser a -> Parser a
-between opening closing inner = do
-    token opening
-    body <- inner
-    token closing
-    return body
+between opening closing inner = token opening *> inner <* token closing
 
 parseIdent :: Parser String
 parseIdent = do
@@ -83,12 +78,10 @@ topLevel :: Parser Expr
 topLevel = do
     dec <- peek
     case dec of
-        Percent -> do
-            eat
-            nm <- parseIdent
-            args <- between OPar CPar $ sepBy parseIdent Coma
-            body <- expr
-            return $ FunDec nm args body
+        Percent -> FunDec <$> (eat *> parseIdent) <*> args <*> body
+            where
+                args = between OPar CPar $ sepBy parseIdent Coma
+                body = expr
         _ -> expr
 
 expr :: Parser Expr
@@ -96,20 +89,11 @@ expr = do
     t <- term
     op <- peek
     case op of
-        Op '+' -> do
-            eat
-            rhs <- expr
-            return $ Add t rhs
-        Op '-' -> do
-            eat
-            rhs <- expr
-            return $ Sub t rhs
+        Op '+' -> Add <$> pure t <*> (eat *> expr)
+        Op '-' -> Sub <$> pure t <*> (eat *> expr)
         Op '=' ->
             case t of
-                Var nm -> do
-                    eat
-                    rhs <- expr
-                    return $ Assign nm rhs
+                Var nm -> Assign <$> pure nm <*> (eat *> expr)
                 _ -> fail "can only assign to a lvalue"
         _ -> return t
 
@@ -118,14 +102,8 @@ term = do
     lhs <- factor
     op <- peek
     case op of
-        Op '*' -> do
-            eat
-            rhs <- term
-            return $ Mul lhs rhs
-        Op '/' -> do
-            eat
-            rhs <- term
-            return $ Div lhs rhs
+        Op '*' -> Mul <$> (eat *> pure lhs) <*> term
+        Op '/' -> Div <$> (eat *> pure lhs) <*> term
         _ -> return lhs
 
 factor :: Parser Expr
@@ -133,21 +111,14 @@ factor = do
     tok <- eat
     case tok of
         Op '+' -> factor
-        Op '-' -> do
-            nbr <- factor
-            return $ Neg nbr
+        Op '-' -> Neg <$> factor
         TokNbr a -> return $ Const a
         Ident a -> do
             fun <- peek
             case fun of
-                OPar -> do
-                    args <- between OPar CPar funArgs
-                    return $ FunCall a args
+                OPar -> (FunCall a) <$> between OPar CPar funArgs
                 _ -> return $ Var a
-        OPar -> do
-            e <- expr
-            token CPar
-            return e
+        OPar -> expr <* token CPar
         _ -> fail "unexpected token"
 
 funArgs :: Parser [Expr]
