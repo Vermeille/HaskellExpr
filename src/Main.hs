@@ -7,9 +7,14 @@ evalLine :: Env -> IO ()
 evalLine env = do
     input <- getLine
     let ast = fst . runParser fullParser . tokenize $ input
-    let res = runEval (eval ast) env
-    putStrLn $ show ast ++ " = " ++ (show . fst $ res)
-    evalLine . snd $ res
+    let (res, env', ioOut) = runEval (eval ast) () env
+    putStrLn $ show ast ++ " = " ++ show res
+    mapM_ execIO ioOut
+    evalLine env'
+
+execIO :: IOAction -> IO ()
+execIO (Print str) = putStrLn str
 
 main :: IO ()
-main = evalLine M.empty
+main = do
+    evalLine (M.empty, ["42", "84"])

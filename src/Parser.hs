@@ -66,8 +66,23 @@ token t = do
         (a, b) -> if a == b then return t' else
             fail $ "expecting " ++ show t ++ " but found " ++ show t'
 
+betweenOp :: Token -> Token -> Parser a -> Parser [a]
+betweenOp opening closing inner = do
+    _ <- token opening
+    nxt <- peek
+    if nxt == closing then
+        eat *> return []
+    else do
+        body <- inner
+        _ <- token closing
+        return [body]
+
 between :: Token -> Token -> Parser a -> Parser a
-between opening closing inner = token opening *> inner <* token closing
+between opening closing inner = do
+    _ <- token opening
+    body <- inner
+    _ <- token closing
+    return body
 
 parseIdent :: Parser String
 parseIdent = do
@@ -80,7 +95,7 @@ topLevel = do
     case dec of
         Percent -> FunDec <$> (eat *> parseIdent) <*> args <*> body
             where
-                args = between OPar CPar $ sepBy parseIdent Coma
+                args = betweenOp OPar CPar $ sepBy parseIdent Coma >>= return . concat
                 body = expr
         _ -> expr
 
@@ -116,7 +131,7 @@ factor = do
         Ident a -> do
             fun <- peek
             case fun of
-                OPar -> (FunCall a) <$> between OPar CPar funArgs
+                OPar -> FunCall a <$> (concat <$> betweenOp OPar CPar funArgs)
                 _ -> return $ Var a
         OPar -> expr <* token CPar
         _ -> fail "unexpected token"
