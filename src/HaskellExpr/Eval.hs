@@ -1,7 +1,7 @@
-module Eval where
+module HaskellExpr.Eval where
 
 import Data.List (intercalate)
-import Parser
+import HaskellExpr.Parser
 import Control.Monad.RWS.Strict
 import qualified Data.Map as M
 import Control.Applicative ((<$>), (<*>))

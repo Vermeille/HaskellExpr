@@ -1,4 +1,4 @@
-module Lexer where
+module HaskellExpr.Lexer where
 
 import Data.Char(isAlpha, isDigit)
 

@@ -1,8 +1,8 @@
-module Main where
+module HaskellExpr.Main where
 
-import           Eval
-import           Parser
-import           Lexer
+import HaskellExpr.Eval
+import HaskellExpr.Parser
+import HaskellExpr.Lexer
 import qualified Data.Map as M
 
 evalLine :: Env -> IO ()
@@ -17,7 +17,7 @@ evalLine env = do
 evalSource :: String -> String -> (Int, Env, [IOAction])
 evalSource input env =
     let ast = fst . runParser fullParser . fst . tokenize $ input
-    in runEval (eval ast) () $ (read env :: SymTable, [])
+    in runEval (eval ast) () $ (M.fromList $ read env :: SymTable, [])
 
 execIO :: IOAction -> IO ()
 execIO (Print str) = putStrLn str

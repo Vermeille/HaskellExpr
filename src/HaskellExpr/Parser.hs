@@ -1,8 +1,8 @@
-module Parser where
+module HaskellExpr.Parser where
 
 import           Control.Monad.State
 import           Data.List           (intercalate)
-import           Lexer
+import HaskellExpr.Lexer
 import Control.Applicative ((<$>), (<*>), (*>), (<*), pure)
 
 data Expr   = Const Int
@@ -32,7 +32,7 @@ instance Show Expr where
     show (Neg e) = "-(" ++ show e ++ ")"
     show (Assign v e) = v ++ " = " ++ show e
     show (FunCall nm args) = nm ++ "(" ++ (intercalate ", " . map show $ args) ++ ")"
-    show (FunDec nm args body) = nm ++ "(" ++ intercalate ", " args ++ ") {" ++ show body ++ "}"
+    show (FunDec nm args body) = "%" ++ nm ++ "(" ++ intercalate ", " args ++ ") {" ++ show body ++ "}"
 
 type Parser a = State [Token] a
 
@@ -99,7 +99,7 @@ topLevel = do
     dec <- peek
     case dec of
         Percent -> FunDec <$> (eat *> parseIdent) <*> args <*> body
-            where
+             where
                 args = betweenOp OPar CPar $ sepBy parseIdent Coma >>= return . concat
                 body = expr
         _ -> expr
