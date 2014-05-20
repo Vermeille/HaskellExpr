@@ -17,6 +17,11 @@ data Expr   = Const Int
             | FunDec String [String] Expr
             deriving (Eq)
 
+instance Read Expr where
+        readsPrec _ str = [(fst $ runParser fullParser toks, str')]
+                where
+                    (toks, str') = tokenize str
+
 instance Show Expr where
     show (Const a) = show a
     show (Var s) = s
