@@ -2,9 +2,12 @@ module HaskellExpr.Eval where
 
 import Data.List (intercalate)
 import HaskellExpr.Parser
+import HaskellExpr.Lexer
 import Control.Monad.RWS.Strict
 import qualified Data.Map as M
 import Control.Applicative ((<$>), (<*>))
+
+import Debug.Trace
 
 data IOAction   = Print String
                 deriving (Show)
@@ -77,3 +80,9 @@ eval (FunCall nm args)
 eval fun@(FunDec nm _ _) = do
     writeVar nm fun
     return 0
+
+evalSource :: String -> String -> (Int, Env, [IOAction])
+evalSource input env =
+    let ast = fst . runParser fullParser . map fst . tokenize $ input
+    in runEval (eval ast) () $ (read (trace env env) :: SymTable, [])
+

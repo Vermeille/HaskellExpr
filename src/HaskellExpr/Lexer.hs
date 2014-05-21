@@ -12,28 +12,27 @@ data Token  = TokNbr Int
             | Percent
             deriving (Eq, Show)
 
-tokenize :: String -> ([Token], String)
-tokenize [] = ([EOF], "")
+tokenize :: String -> [(Token, String)]
+tokenize [] = [(EOF, "")]
 tokenize (' ':cs) = tokenize cs
-tokenize ('+':cs) = Op '+' `lexThen` tokenize cs
-tokenize ('-':cs) = Op '-' `lexThen` tokenize cs
-tokenize ('*':cs) = Op '*' `lexThen` tokenize cs
-tokenize ('/':cs) = Op '/' `lexThen` tokenize cs
-tokenize ('=':cs) = Op '=' `lexThen` tokenize cs
-tokenize ('(':cs) = OPar `lexThen` tokenize cs
-tokenize (')':cs) = CPar `lexThen` tokenize cs
-tokenize (',':cs) = Coma `lexThen` tokenize cs
-tokenize ('%':cs) = Percent `lexThen` tokenize cs
-tokenize ('\n':cs) = ([EOF], cs)
+tokenize ('+':cs) = (Op '+', cs):tokenize cs
+tokenize ('-':cs) = (Op '-', cs):tokenize cs
+tokenize ('*':cs) = (Op '*', cs):tokenize cs
+tokenize ('/':cs) = (Op '/', cs):tokenize cs
+tokenize ('=':cs) = (Op '=', cs):tokenize cs
+tokenize ('(':cs) = (OPar, cs):tokenize cs
+tokenize (')':cs) = (CPar, cs):tokenize cs
+tokenize (',':cs) = (Coma, cs):tokenize cs
+tokenize ('%':cs) = (Percent, cs):tokenize cs
+tokenize ('\n':cs) = [(EOF, cs)]
 tokenize cs | isDigit . head $ cs =
                 let (val, cs') = atoi cs
-                in TokNbr val `lexThen` tokenize cs'
+                in (TokNbr val, cs'):tokenize cs'
             | isAlpha . head $ cs =
                 let ident = takeWhile isAlpha cs
-                in Ident ident `lexThen` tokenize (drop (length ident) cs)
-            | otherwise = ([], cs)
-
-lexThen t (t', str') = (t:t', str')
+                    cs' = drop (length ident) cs
+                in (Ident ident, cs'):tokenize cs'
+            | otherwise = [(EOF, cs)]
 
 atoi :: String -> (Int, String)
 atoi cs = let valStr = takeWhile isDigit cs

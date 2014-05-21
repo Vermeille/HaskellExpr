@@ -18,9 +18,10 @@ data Expr   = Const Int
             deriving (Eq)
 
 instance Read Expr where
-        readsPrec _ str = [(fst $ runParser fullParser toks, str')]
+        readsPrec _ str = [(fst parsed, last . map snd . take (length (snd parsed)+1) . reverse $ toks)]
                 where
-                    (toks, str') = tokenize str
+                    toks = tokenize str
+                    parsed = runParser fullParser $ map fst toks
 
 instance Show Expr where
     show (Const a) = show a
@@ -32,7 +33,7 @@ instance Show Expr where
     show (Neg e) = "-(" ++ show e ++ ")"
     show (Assign v e) = v ++ " = " ++ show e
     show (FunCall nm args) = nm ++ "(" ++ (intercalate ", " . map show $ args) ++ ")"
-    show (FunDec nm args body) = "%" ++ nm ++ "(" ++ intercalate ", " args ++ ") {" ++ show body ++ "}"
+    show (FunDec nm args body) = "%" ++ nm ++ "(" ++ intercalate ", " args ++ ") " ++ show body
 
 type Parser a = State [Token] a
 
@@ -100,7 +101,7 @@ topLevel = do
     case dec of
         Percent -> FunDec <$> (eat *> parseIdent) <*> args <*> body
              where
-                args = betweenOp OPar CPar $ sepBy parseIdent Coma >>= return . concat
+                args = (betweenOp OPar CPar $ sepBy parseIdent Coma) >>= return . concat
                 body = expr
         _ -> expr
 
